@@ -1,0 +1,84 @@
+name: VShop
+main: au.com.live.havrer0.vshop.VShop
+version: 1.0
+author: Erik H
+depend: [SQLibrary, Vault]
+database: true
+commands:
+   vs:
+      description: Command that displays info about VShop.
+      usage: /vs
+      permission: vshop.info
+      permission-message: You can't use that command.
+      aliases: [vshop]
+   sell:
+      description: Allows the player to place items into the shop.
+      usage: /sell {itemname|hand} price
+      permission: vshop.sell
+      permission-message: You can't use that command.
+   buy:
+      description: Allows the player to buy an item (or multiple) from the shop.
+      usage: /buy itemname amount
+      permission: vshop.buy
+      permission-message: You can't use that command.   
+   cancel:
+      description: Allows the player to cancel an item they're selling in the shop.
+      usage: /cancel itemname {amount|all}
+      permission: vshop.cancel
+      permission-message: You can't use that command.   
+   search:
+      description: Allows the player to search for an item in the shop.
+      usage: /search itemname
+      permission: vshop.search
+      permission-message: You can't use that command.   
+   stock:
+      description: Allows the player to view items specific players are selling.
+      usage: /stock playername
+      permission: vshop.stock
+      permission-message: You can't use that command.  
+   listings:
+      description: Allows the player to view all the listings.
+      usage: /listings
+      permission: vshop.listings
+      permission-message: You can't use that command.    
+   vsa:
+      description: Allows the player to perform a raw SQL query that does not return data.
+      usage: /vsa
+      permission: vshop.admin
+      permission-message: You can't use that command.           
+permissions:
+  vshop.*:
+    description: Gives access to every VShop command.
+    children:
+      vshop.info: true
+      vshop.sell: true
+      vshop.buy: true
+      vshop.cancel: true
+      vshop.search: true
+      vshop.stock: true
+      vshop.listings: true
+      vshop.admin: true
+  vshop.info:
+    description: Allows you to view the info page.
+    default: op
+  vshop.sell:
+    description: Allows you to sell.
+    default: true
+  vshop.buy:
+    description: Allows you to buy.
+    default: true
+  vshop.cancel:
+    description: Allows you to cancel items you are selling.
+    default: true
+  vshop.search:
+    description: Allows you to search for an item in the shop.
+    default: true
+  vshop.stock:
+    description: Allows you to view items specific players are selling.
+    default: true
+  vshop.listings:
+    description: Allows you to view all the listings.
+    default: true
+  vshop.admin:
+    description: Allows you to perform raw SQL queries that do not return data.
+    default: op
