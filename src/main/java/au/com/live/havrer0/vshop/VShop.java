@@ -84,16 +84,16 @@ public final class VShop extends JavaPlugin implements Listener {
 				e.printStackTrace();
 			}*/
 	    	try {
-				sql.query("CREATE TABLE `Selling` ( `SellingID`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `ItemName`	TEXT NOT NULL, `ItemMetadata`	INTEGER NOT NULL DEFAULT 0, `ItemAmount`	INTEGER NOT NULL, `Seller`	TEXT NOT NULL, `Price`	REAL NOT NULL)");
+				sql.query("CREATE TABLE `Selling` ( `SellingID`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `ItemName`	TEXT NOT NULL, `ItemMetadata`	INTEGER NOT NULL DEFAULT 0, `ItemAmount`	INTEGER NOT NULL, `Seller`	TEXT NOT NULL, `Price`	REAL NOT NULL, `Infinite`	INTEGER  NOT NULL DEFAULT 0);");
 			} catch (SQLException e) {				
 				e.printStackTrace();
 			}
-	    	try {
+	    /*	try {
 				sql.query("CREATE TABLE `Transactions` ( `TransactionID`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `SellingID`	INTEGER NOT NULL, `Purchaser`	TEXT NOT NULL, `AmountPurchased`	INTEGER NOT NULL)");
 			} catch (SQLException e) {				
 				e.printStackTrace();
 			}
-			
+			*/
             config.set("setupDone", true);
 	    }
 	    this.getLogger().info("VShop version 1.0 has been loaded!");
@@ -130,15 +130,19 @@ public final class VShop extends JavaPlugin implements Listener {
 	
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-		Player player = (Player) sender;
-		PlayerInventory inv = player.getInventory();
 		
-		if (cmd.getName().equalsIgnoreCase("vs") || cmd.getName().equalsIgnoreCase("vshop") && player.hasPermission("vshop.info")) {
+		if (cmd.getName().equalsIgnoreCase("vs") || cmd.getName().equalsIgnoreCase("vshop") && sender.hasPermission("vshop.info")) {
 			sender.sendMessage(ChatColor.GREEN + "VShop is running version: " + ChatColor.AQUA + this.getDescription().getVersion().toString() + ChatColor.GREEN + ".");
 			return true;
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("sell") && sender instanceof Player && player.hasPermission("vshop.sell")) {
+		if (cmd.getName().equalsIgnoreCase("sell") && sender.hasPermission("vshop.sell")) {
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Senders without inventories cannot sell, try using an admin tool instead.");
+				return true;
+			}
+			Player player = (Player) sender;
+			PlayerInventory inv = player.getInventory();
 			int pitemamt = 0;
 			if (args.length < 2){
 				return false;
@@ -252,7 +256,13 @@ public final class VShop extends JavaPlugin implements Listener {
 			}
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("cancel") && sender instanceof Player && player.hasPermission("vshop.cancel")) {
+		if (cmd.getName().equalsIgnoreCase("cancel") && sender.hasPermission("vshop.cancel")) {
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Senders without inventories cannot cancel items into their inventories, try using an admin tool instead.");
+				return true;
+			}
+			Player player = (Player) sender;
+			PlayerInventory inv = player.getInventory();
 			if (args.length < 2) {
 				return false;
 			}
@@ -299,41 +309,62 @@ public final class VShop extends JavaPlugin implements Listener {
 			}
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("buy") && sender instanceof Player && player.hasPermission("vshop.buy")) {			
+		if (cmd.getName().equalsIgnoreCase("buy") && sender.hasPermission("vshop.buy")) {			
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Senders without inventories cannot buy, try using an admin tool instead.");
+				return true;
+			}
+			Player player = (Player) sender;
+			PlayerInventory inv = player.getInventory();
 			if (args.length < 2) {
 				return false;
 			}
 			try {			
 				//Gets a list of items that match the item the player is searching for and stores it in res.
                 ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC;");
-				//Checks if the item amount is enough for the player's request
-				if (res.getInt("ItemAmount") >= Integer.parseInt(args[1])) {
-					//Checks if the player has enough money, if so, withdraws the money and deposits it into the seller's account.
-					if (eco.has(this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))), (res.getDouble("Price") * Integer.parseInt(args[1])))) {
-						eco.withdrawPlayer(player, (res.getDouble("Price") * Integer.parseInt(args[1])));
-						eco.depositPlayer(this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))), (res.getDouble("Price") * Integer.parseInt(args[1])));
-						//If the listing is left with no items, it deletes it
-						if ((res.getInt("ItemAmount") - Integer.parseInt(args[1])) == 0) {
-							sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");
+				if (res.getBoolean("Infinite")) {
+						if (eco.has(player, (res.getDouble("Price") * Integer.parseInt(args[1])))) {
+							eco.withdrawPlayer(player, (res.getDouble("Price") * Integer.parseInt(args[1])));
+							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
+							pris.setDurability(res.getShort("ItemMetadata"));
+							inv.addItem(pris);
+							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ".");
+							this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + "Server" + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
+							res.close();
+							return true;
+						} else {
+							player.sendMessage(ChatColor.RED + "You don't have enough money for that.");
+							return true;
 						}
-						//Or it changes the amount to reflect the purchase
-						sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");
-						//Gives the player the item
-						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
-						pris.setDurability(res.getShort("ItemMetadata"));
-						inv.addItem(pris);
-						player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ".");
-						this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + "." );
-						this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
-						res.close();
-						return true;
+					}  else {
+						if (res.getInt("ItemAmount") >= Integer.parseInt(args[1])) {
+						//Checks if the player has enough money, if so, withdraws the money and deposits it into the seller's account.
+						if (eco.has(player, (res.getDouble("Price") * Integer.parseInt(args[1])))) {
+							eco.withdrawPlayer(player, (res.getDouble("Price") * Integer.parseInt(args[1])));
+							eco.depositPlayer(this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))), (res.getDouble("Price") * Integer.parseInt(args[1])));
+							//If the listing is left with no items, it deletes it
+							if ((res.getInt("ItemAmount") - Integer.parseInt(args[1])) == 0) {
+								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");
+							}
+							//Or it changes the amount to reflect the purchase
+							sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");
+							//Gives the player the item
+							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
+							pris.setDurability(res.getShort("ItemMetadata"));
+							inv.addItem(pris);
+							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ".");
+							this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + "." );
+							this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
+							res.close();
+							return true;
+						} else {
+							player.sendMessage(ChatColor.RED + "You don't have enough money for that.");
+							return true;
+						}
 					} else {
-						player.sendMessage(ChatColor.RED + "You don't have enough money for that.");
+						player.sendMessage(ChatColor.RED + "Not enough items available to service request, try a lower amount.");
 						return true;
 					}
-				} else {
-					player.sendMessage(ChatColor.RED + "Not enough items available to service request, try a lower amount.");
-					return true;
 				}
 			} catch (SQLException e) {
 				if (e.getMessage().contains("closed")) {
@@ -347,21 +378,25 @@ public final class VShop extends JavaPlugin implements Listener {
 			}
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("search") && sender instanceof Player && player.hasPermission("vshop.search")) {
+		if (cmd.getName().equalsIgnoreCase("search") && sender.hasPermission("vshop.search")) {
 			if (args.length < 1) {
 				return false;
 			}
 			try {
 				ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC;");
-				player.sendMessage(ChatColor.GREEN + "Listings of " + ChatColor.AQUA + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + ".");
+				sender.sendMessage(ChatColor.GREEN + "Listings of " + ChatColor.AQUA + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + ".");
 				while (res.next()) {
-					player.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price"))  + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					if (res.getBoolean("Infinite")) {
+						sender.sendMessage(ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+						return true;
+					}
+					sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount")  + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
 				}
 				res.close();
 				return true;
 			} catch (SQLException e) {
 				if (e.getMessage().contains("closed")) {
-					player.sendMessage(ChatColor.RED + "No one is selling that item.");
+					sender.sendMessage(ChatColor.RED + "No one is selling that item.");
 				} else {
 					e.printStackTrace();
 				}
@@ -369,19 +404,24 @@ public final class VShop extends JavaPlugin implements Listener {
 			
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("stock") && sender instanceof Player && player.hasPermission("vshop.stock")) {
+		if (cmd.getName().equalsIgnoreCase("stock") && sender.hasPermission("vshop.stock")) {
 			if (args.length < 1) {
 				try {
+					if (!(sender instanceof Player)) {
+						sender.sendMessage(ChatColor.RED + "You don't have a UUID.");
+						return false;
+					}
+					Player player = (Player) sender;
 					ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + player.getUniqueId().toString() +  "' ORDER BY SellingID DESC;");
-					player.sendMessage(ChatColor.DARK_GREEN + "Your" + ChatColor.GREEN +  " listings.");
+					sender.sendMessage(ChatColor.DARK_GREEN + "Your" + ChatColor.GREEN +  " listings.");
 					while (res.next()) {
-						player.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+						sender.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
 					}
 					res.close();
 					return true;
 				} catch (SQLException e) {
 					if (e.getMessage().contains("closed")) {
-						player.sendMessage(ChatColor.RED + "You must not be selling anything.");
+						sender.sendMessage(ChatColor.RED + "You must not be selling anything.");
 						return true;
 					} else {
 						e.printStackTrace();
@@ -390,16 +430,25 @@ public final class VShop extends JavaPlugin implements Listener {
 				}
 			}
 			try {
+				if (args[0].equalsIgnoreCase("Server")) {
+					ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + "Server" +  "' ORDER BY SellingID DESC;");
+					sender.sendMessage(ChatColor.DARK_GREEN + "Server" + "'s" + ChatColor.GREEN +  " listings.");
+					while (res.next()) {
+						sender.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					}
+					res.close();
+					return true;
+				}
 				ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() +  "' ORDER BY SellingID DESC;");
-				player.sendMessage(ChatColor.DARK_GREEN + args[0].toString() + "'s" + ChatColor.GREEN +  " listings.");
+				sender.sendMessage(ChatColor.DARK_GREEN + args[0].toString() + "'s" + ChatColor.GREEN +  " listings.");
 				while (res.next()) {
-					player.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					sender.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
 				}
 				res.close();
 				return true;
 			} catch (SQLException e) {
 				if (e.getMessage().contains("closed")) {
-					player.sendMessage(ChatColor.RED + "That player must not be selling anything.");
+					sender.sendMessage(ChatColor.RED + "That player must not be selling anything.");
 					return true;
 				} else {
 					e.printStackTrace();
@@ -408,19 +457,24 @@ public final class VShop extends JavaPlugin implements Listener {
 			}
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("listings") && sender instanceof Player && player.hasPermission("vshop.listings")){
+		if (cmd.getName().equalsIgnoreCase("listings") && sender.hasPermission("vshop.listings")){
 			try {
 				ResultSet res = sql.query("SELECT * FROM Selling ORDER BY SellingID DESC;");
 				while (res.next()) {
-					player.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					if (res.getBoolean("Infinite")) {
+						sender.sendMessage(ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+						return true;
+					} else {
+					sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					}
 				}
 				res.close();
 				return true;
 			} catch (SQLException e) {
 				if (e.getMessage().contains("closed")) {
-					player.sendMessage(ChatColor.RED + "No one must be selling anything.");
+					sender.sendMessage(ChatColor.RED + "No one must be selling anything.");
 				} else {
-					player.sendMessage(ChatColor.RED + "An SQL error occurred.");
+					sender.sendMessage(ChatColor.RED + "An SQL error occurred.");
 					e.printStackTrace();
 					return true;
 				}
@@ -428,22 +482,55 @@ public final class VShop extends JavaPlugin implements Listener {
 			
 		}
 		
-		if (cmd.getName().equalsIgnoreCase("vsa") && sender instanceof Player && player.hasPermission("vshop.admin")) {
-			String sqlq = "";
-			for (int i = 0; i < args.length; i++) {
-				sqlq += args[i] + " ";
+		if (cmd.getName().equalsIgnoreCase("vsa") && sender.hasPermission("vshop.admin")) {
+			if (args.length < 2) {
+				return false;
 			}
-			sqlq.trim();
-			player.sendMessage(sqlq.toString());
-			try {
-				sql.query(sqlq);
-			} catch (SQLException e) {
-				player.sendMessage(ChatColor.RED + "Your query returned an error.");
-				player.sendMessage(ChatColor.RED + "This error message may help: " + e.getLocalizedMessage());
-				e.printStackTrace();
-				return true;
+			if (args[0].equalsIgnoreCase("query") && sender.hasPermission("vshop.admin.query")) {
+				if (sender.hasPermission("vshop.admin.query")) {
+				}
+				String sqlq = "";
+				for (int i = 1; i < args.length; i++) {
+					sqlq += args[i] + " ";
+				}
+				sqlq.trim();
+				sender.sendMessage(sqlq.toString());
+				try {
+					sql.query(sqlq);
+				} catch (SQLException e) {
+					sender.sendMessage(ChatColor.RED + "Your query returned an error.");
+					sender.sendMessage(ChatColor.RED + "This error message may help: " + e.getLocalizedMessage());
+					e.printStackTrace();
+					return true;
+				}
+				return true;	
 			}
-			return true;
+			if (args[0].equalsIgnoreCase("createinf") && sender.hasPermission("vshop.admin.createinf")) {
+				try {
+					sql.query("UPDATE Selling SET Seller='Server', Infinite='1', ItemAmount='1' WHERE SellingID='" + args[1] + "';");
+					sender.sendMessage(ChatColor.GREEN + "Successfully created infinite listing.");
+					return true;
+				} catch (SQLException e) {
+					sender.sendMessage(ChatColor.RED + "An SQL error occurred. The following message may help.");
+					sender.sendMessage(e.getLocalizedMessage());
+					e.printStackTrace();
+					return true;
+				}
+			}
+			if (args[0].equalsIgnoreCase("delete") && sender.hasPermission("vshop.admin.delete")) {
+				try {
+					sql.query("DELETE FROM Selling WHERE SellingID='" + args[1] + "';");
+					sender.sendMessage(ChatColor.GREEN + "Successfully delete listing with ID " + args[1]);
+					return true;
+				} catch (SQLException e) {
+					sender.sendMessage(ChatColor.RED + "An SQL error occurred. The following message may help.");
+					sender.sendMessage(e.getLocalizedMessage());
+					e.printStackTrace();
+				}
+			}
+			else {
+			return false;
+			}
 		}
 		return false;
 	}

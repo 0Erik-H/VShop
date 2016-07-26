@@ -42,8 +42,8 @@ commands:
       permission: vshop.listings
       permission-message: You can't use that command.    
    vsa:
-      description: Allows the player to perform a raw SQL query that does not return data.
-      usage: /vsa
+      description: Allows the player to perform a few different admin commands.
+      usage: /vsa {query|delete|createinf} {query|listingid|listingid}
       permission: vshop.admin
       permission-message: You can't use that command.           
 permissions:
@@ -58,6 +58,9 @@ permissions:
       vshop.stock: true
       vshop.listings: true
       vshop.admin: true
+      vshop.admin.query: true
+      vshop.admin.delete: true
+      vshop.admin.createinf: true
   vshop.info:
     description: Allows you to view the info page.
     default: op
@@ -80,5 +83,14 @@ permissions:
     description: Allows you to view all the listings.
     default: true
   vshop.admin:
-    description: Allows you to perform raw SQL queries that do not return data.
+    description: Allows you to perform admin tasks.
+    default: op
+  vshop.admin.query:
+    description: Allows you to execute a raw SQL query.
+    default: false
+  vshop.admin.delete:
+    description: Allows you to delete a listing.
+    default: op
+  vshop.admin.createinf:
+    description: Allows you to create an infinite listing from an existing listing.
     default: op
