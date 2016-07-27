@@ -1,0 +1,4 @@
+language: JAVA
+JAVA:
+- 1.8
+script: src/au/com/havrer0/VShop.java
