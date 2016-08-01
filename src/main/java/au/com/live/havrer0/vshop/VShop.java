@@ -94,6 +94,8 @@ public final class VShop extends JavaPlugin implements Listener {
 				e.printStackTrace();
 			}
 			*/
+	    	eco.createPlayerAccount("Server");
+	    	eco.withdrawPlayer("Server", eco.getBalance("Server"));
             config.set("setupDone", true);
 	    }
 	    this.getLogger().info("VShop version 1.0 has been loaded!");
@@ -147,6 +149,10 @@ public final class VShop extends JavaPlugin implements Listener {
 			if (args.length < 2){
 				return false;
 			}
+			if (Double.parseDouble(args[1]) < 0) {
+				player.sendMessage(ChatColor.RED + "You can't use negative numbers!");
+				return true;
+			}
 			if (args[0].equalsIgnoreCase("hand")) {
 				//attempts to update a previous listing of the item, if that fails, it inserts it into a new row.
 				try {
@@ -195,6 +201,12 @@ public final class VShop extends JavaPlugin implements Listener {
 				return true;
 			} else {
 				//attempts to update a previous listing of the item, if that fails, it inserts it into a new row.
+				try {
+					Items.itemByName(args[0]).getName().toString();
+				} catch (NullPointerException e) {
+					sender.sendMessage(ChatColor.RED + "That item name wasn't recognised.");
+					return false;
+				}
 				try {
 					if(Items.itemByName(args[0]).isDurable()) {
 						player.sendMessage(ChatColor.RED + "You are not able to bulk-sell items that have a durability value. Sell them with /sell hand instead.");
@@ -266,6 +278,12 @@ public final class VShop extends JavaPlugin implements Listener {
 			if (args.length < 2) {
 				return false;
 			}
+			try {
+				Items.itemByName(args[0]).getName().toString();
+			} catch (NullPointerException e) {
+				sender.sendMessage(ChatColor.RED + "That item name wasn't recognised.");
+				return false;
+			}
 			if (args[1].equalsIgnoreCase("all")) {
 				try {
 					ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' AND Seller='" + player.getUniqueId().toString() + "';");
@@ -287,6 +305,10 @@ public final class VShop extends JavaPlugin implements Listener {
 					}
 				}
 			} else {
+				if (Double.parseDouble(args[1]) < 0) {
+					player.sendMessage(ChatColor.RED + "You can't use negative numbers!");
+					return true;
+				}
 				try {
 					ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' AND Seller='" + player.getUniqueId().toString() + "';");
 					sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + player.getUniqueId().toString() + "';");
@@ -319,16 +341,27 @@ public final class VShop extends JavaPlugin implements Listener {
 			if (args.length < 2) {
 				return false;
 			}
+			if (Double.parseDouble(args[1]) < 0) {
+				player.sendMessage(ChatColor.RED + "You can't use negative numbers!");
+				return true;
+			}
+			try {
+				Items.itemByName(args[0]).getName().toString();
+			} catch (NullPointerException e) {
+				sender.sendMessage(ChatColor.RED + "That item name wasn't recognised.");
+				return false;
+			}
 			try {			
 				//Gets a list of items that match the item the player is searching for and stores it in res.
                 ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC;");
 				if (res.getBoolean("Infinite")) {
 						if (eco.has(player, (res.getDouble("Price") * Integer.parseInt(args[1])))) {
 							eco.withdrawPlayer(player, (res.getDouble("Price") * Integer.parseInt(args[1])));
+							eco.depositPlayer("Server", (res.getDouble("Price") * Integer.parseInt(args[1])));
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
 							pris.setDurability(res.getShort("ItemMetadata"));
 							inv.addItem(pris);
-							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ".");
+							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ".");
 							this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + "Server" + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
 							res.close();
 							return true;
@@ -337,11 +370,16 @@ public final class VShop extends JavaPlugin implements Listener {
 							return true;
 						}
 					}  else {
+						if (res.getString("Seller").compareTo(player.getUniqueId().toString()) == 0) {
+							player.sendMessage(ChatColor.RED + "You can't buy from yourself. Use /cancel instead.");
+							return true;
+						}
 						if (res.getInt("ItemAmount") >= Integer.parseInt(args[1])) {
 						//Checks if the player has enough money, if so, withdraws the money and deposits it into the seller's account.
 						if (eco.has(player, (res.getDouble("Price") * Integer.parseInt(args[1])))) {
 							eco.withdrawPlayer(player, (res.getDouble("Price") * Integer.parseInt(args[1])));
-							eco.depositPlayer(this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))), (res.getDouble("Price") * Integer.parseInt(args[1])));
+							eco.depositPlayer(this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))), ((res.getDouble("Price") * Integer.parseInt(args[1]) * 0.9)));
+							eco.depositPlayer("Server", ((res.getDouble("Price") * Integer.parseInt(args[1]) * 0.1)));
 							//If the listing is left with no items, it deletes it
 							if ((res.getInt("ItemAmount") - Integer.parseInt(args[1])) == 0) {
 								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");
@@ -353,7 +391,7 @@ public final class VShop extends JavaPlugin implements Listener {
 							pris.setDurability(res.getShort("ItemMetadata"));
 							inv.addItem(pris);
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ".");
-							this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + "." );
+							this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format(0.9 * (res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + ChatColor.GREEN + ".");
 							this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
 							res.close();
 							return true;
@@ -380,6 +418,12 @@ public final class VShop extends JavaPlugin implements Listener {
 		
 		if (cmd.getName().equalsIgnoreCase("search") && sender.hasPermission("vshop.search")) {
 			if (args.length < 1) {
+				return false;
+			}
+			try {
+				Items.itemByName(args[0]).getName().toString();
+			} catch (NullPointerException e) {
+				sender.sendMessage(ChatColor.RED + "That item name wasn't recognised.");
 				return false;
 			}
 			try {
@@ -463,7 +507,6 @@ public final class VShop extends JavaPlugin implements Listener {
 				while (res.next()) {
 					if (res.getBoolean("Infinite")) {
 						sender.sendMessage(ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
-						return true;
 					} else {
 					sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
 					}
@@ -487,8 +530,6 @@ public final class VShop extends JavaPlugin implements Listener {
 				return false;
 			}
 			if (args[0].equalsIgnoreCase("query") && sender.hasPermission("vshop.admin.query")) {
-				if (sender.hasPermission("vshop.admin.query")) {
-				}
 				String sqlq = "";
 				for (int i = 1; i < args.length; i++) {
 					sqlq += args[i] + " ";
@@ -528,9 +569,12 @@ public final class VShop extends JavaPlugin implements Listener {
 					e.printStackTrace();
 				}
 			}
-			else {
+			if (args[0].equalsIgnoreCase("update")) {
+		    	eco.createPlayerAccount("Server");
+		    	eco.withdrawPlayer("Server", eco.getBalance("Server"));
+				return true;	
+			} 
 			return false;
-			}
 		}
 		return false;
 	}
