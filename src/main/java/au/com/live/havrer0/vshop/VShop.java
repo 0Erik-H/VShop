@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -290,7 +292,11 @@ public final class VShop extends JavaPlugin implements Listener {
 					sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + player.getUniqueId().toString() + "';");
 					ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
 					pris.setDurability(res.getShort("ItemMetadata"));
-					inv.addItem(pris);
+					 HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					        
+					    }
 					player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " items.");
 					res.close();
 					return true;
@@ -311,13 +317,34 @@ public final class VShop extends JavaPlugin implements Listener {
 				}
 				try {
 					ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' AND Seller='" + player.getUniqueId().toString() + "';");
-					sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + player.getUniqueId().toString() + "';");
-					ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
-					pris.setDurability(res.getShort("ItemMetadata"));
-					inv.addItem(pris);
-					player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ". Amount remaining: " + ChatColor.AQUA + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + ChatColor.GREEN + ".");
-					res.close();
-					return true;
+					if (Integer.parseInt(args[1]) > res.getInt("ItemAmount")) {
+						player.sendMessage(ChatColor.RED + "You're attempting to cancel too many items. Your listing only has " + res.getInt("ItemAmount") + " items.");
+						return true;
+					}
+					if ((Integer.parseInt(args[1]) - res.getInt("ItemAmount")) == 0) {
+						sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + player.getUniqueId().toString() + "';");
+						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
+						pris.setDurability(res.getShort("ItemMetadata"));
+					    HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					    }
+						player.sendMessage(ChatColor.GREEN + "You cancelled all of the items in that listing.");
+						res.close();
+						return true;
+					}
+					else {
+						sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + player.getUniqueId().toString() + "';");
+						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
+						pris.setDurability(res.getShort("ItemMetadata"));
+						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					    }
+						player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ". Amount remaining: " + ChatColor.AQUA + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + ChatColor.GREEN + ".");
+						res.close();
+						return true;
+					}
 				} catch (SQLException e) {
 					if (e.getMessage().contains("closed")) {
 						player.sendMessage(ChatColor.RED + "You must not be selling that item.");
@@ -341,14 +368,19 @@ public final class VShop extends JavaPlugin implements Listener {
 			if (args.length < 2) {
 				return false;
 			}
-			if (Double.parseDouble(args[1]) < 0) {
-				player.sendMessage(ChatColor.RED + "You can't use negative numbers!");
-				return true;
-			}
 			try {
 				Items.itemByName(args[0]).getName().toString();
 			} catch (NullPointerException e) {
 				sender.sendMessage(ChatColor.RED + "That item name wasn't recognised.");
+				return false;
+			}
+			try {
+				if (Double.parseDouble(args[1]) < 0) {
+					player.sendMessage(ChatColor.RED + "You can't use negative numbers!");
+					return true;
+				}
+			} catch (NumberFormatException e) {
+				player.sendMessage(ChatColor.RED + "That wasn't a number!");
 				return false;
 			}
 			try {			
@@ -360,7 +392,10 @@ public final class VShop extends JavaPlugin implements Listener {
 							eco.depositPlayer("Server", (res.getDouble("Price") * Integer.parseInt(args[1])));
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
 							pris.setDurability(res.getShort("ItemMetadata"));
-							inv.addItem(pris);
+							HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+						    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						    }
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ".");
 							this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + "Server" + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
 							res.close();
@@ -389,9 +424,14 @@ public final class VShop extends JavaPlugin implements Listener {
 							//Gives the player the item
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
 							pris.setDurability(res.getShort("ItemMetadata"));
-							inv.addItem(pris);
+							HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+						    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						    }
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ".");
-							this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format(0.9 * (res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + ChatColor.GREEN + ".");
+							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
+								this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format(0.9 * (res.getDouble("Price") * Integer.parseInt(args[1]))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + ChatColor.GREEN + ".");
+							}
 							this.getLogger().info(player.getName().toString() + " bought " + args[1] + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * Integer.parseInt(args[1]))) + ".");
 							res.close();
 							return true;
