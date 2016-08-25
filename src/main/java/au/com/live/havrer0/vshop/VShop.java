@@ -489,14 +489,28 @@ public final class VShop extends JavaPlugin implements Listener {
 				return false;
 			}
 			try {
-				ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC;");
+				ResultSet res;
+				Integer curPage;
+				if (args.length < 2) {
+					curPage = 1;
+					res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC LIMIT 6;");
+				} else {
+					curPage = Integer.parseInt(args[1]);
+					res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC LIMIT 6 OFFSET " + ((curPage - 1) * 6) + ";");
+				}
 				sender.sendMessage(ChatColor.GREEN + "Listings of " + ChatColor.AQUA + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + ".");
 				while (res.next()) {
 					if (res.getBoolean("Infinite")) {
 						sender.sendMessage(ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
-						return true;
-					}
-					sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount")  + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					} else {
+						sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount")  + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					}					
+				}
+				res = sql.query("SELECT COUNT(*) AS totalPages FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "';");
+				if ((res.getInt("totalPages") % 6) > 0) {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+				} else {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
 				}
 				res.close();
 				return true;
@@ -518,10 +532,19 @@ public final class VShop extends JavaPlugin implements Listener {
 						return false;
 					}
 					Player player = (Player) sender;
-					ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + player.getUniqueId().toString() +  "' ORDER BY SellingID DESC;");
-					sender.sendMessage(ChatColor.DARK_GREEN + "Your" + ChatColor.GREEN +  " listings.");
+					ResultSet res;
+					Integer curPage;
+					curPage = 1;
+					res = sql.query("SELECT * FROM Selling WHERE Seller='" + player.getUniqueId().toString() +  "' ORDER BY SellingID DESC LIMIT 6;");
+					sender.sendMessage(ChatColor.GREEN + "Your listings.");
 					while (res.next()) {
 						sender.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					}
+					res = sql.query("SELECT COUNT(*) AS totalPages FROM Selling WHERE Seller='" + player.getUniqueId().toString() +  "';");
+					if ((res.getInt("totalPages") % 6) > 0) {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+					} else {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
 					}
 					res.close();
 					return true;
@@ -537,18 +560,46 @@ public final class VShop extends JavaPlugin implements Listener {
 			}
 			try {
 				if (args[0].equalsIgnoreCase("Server")) {
-					ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + "Server" +  "' ORDER BY SellingID DESC;");
-					sender.sendMessage(ChatColor.DARK_GREEN + "Server" + "'s" + ChatColor.GREEN +  " listings.");
+					ResultSet res;
+					Integer curPage;
+					if (args.length < 2) {
+						curPage = 1;
+						res = sql.query("SELECT * FROM Selling WHERE Seller='Server' ORDER BY SellingID DESC LIMIT 6;");
+					} else {
+						curPage = Integer.parseInt(args[1]);
+						res = sql.query("SELECT * FROM Selling WHERE Seller='Server' ORDER BY SellingID DESC LIMIT 6 OFFSET " + ((curPage - 1) * 6) + ";");
+					}
+					sender.sendMessage(ChatColor.DARK_GREEN + "Server's" + ChatColor.GREEN +  " listings.");
 					while (res.next()) {
 						sender.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+					}
+					res = sql.query("SELECT COUNT(*) AS totalPages FROM Selling WHERE Seller='Server';");
+					if ((res.getInt("totalPages") % 6) > 0) {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+					} else {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
 					}
 					res.close();
 					return true;
 				}
-				ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() +  "' ORDER BY SellingID DESC;");
+				ResultSet res;
+				Integer curPage;
+				if (args.length < 2) {
+					curPage = 1;
+					res = sql.query("SELECT * FROM Selling WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() + "' ORDER BY SellingID DESC LIMIT 6;");
+				} else {
+					curPage = Integer.parseInt(args[1]);
+					res = sql.query("SELECT * FROM Selling WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() + "' ORDER BY SellingID DESC LIMIT 6 OFFSET " + ((curPage - 1) * 6) + ";");
+				}
 				sender.sendMessage(ChatColor.DARK_GREEN + args[0].toString() + "'s" + ChatColor.GREEN +  " listings.");
 				while (res.next()) {
 					sender.sendMessage(ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
+				}
+				res = sql.query("SELECT COUNT(*) AS totalPages FROM Selling WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() + "';");
+				if ((res.getInt("totalPages") % 6) > 0) {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+				} else {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
 				}
 				res.close();
 				return true;
@@ -565,13 +616,28 @@ public final class VShop extends JavaPlugin implements Listener {
 		
 		if (cmd.getName().equalsIgnoreCase("listings") && sender.hasPermission("vshop.listings")){
 			try {
-				ResultSet res = sql.query("SELECT * FROM Selling ORDER BY SellingID DESC;");
+				ResultSet res;
+				Integer curPage;
+				if (args.length < 1) {
+					curPage = 1;
+					res = sql.query("SELECT * FROM Selling ORDER BY SellingID DESC LIMIT 6;");
+				} else {
+					curPage = Integer.parseInt(args[0]);
+					res = sql.query("SELECT * FROM Selling ORDER BY SellingID DESC LIMIT 6 OFFSET " + ((curPage - 1) * 6) + ";");
+				}
+				sender.sendMessage(ChatColor.GREEN + "Listings:");
 				while (res.next()) {
 					if (res.getBoolean("Infinite")) {
 						sender.sendMessage(ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + "Infinite" + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
 					} else {
 					sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + " x " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " ID:" + res.getInt("SellingID"));
 					}
+				}
+				res = sql.query("SELECT COUNT(*) AS totalPages FROM Selling;");
+				if ((res.getInt("totalPages") % 6) > 0) {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+				} else {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
 				}
 				res.close();
 				return true;
