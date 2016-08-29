@@ -398,8 +398,6 @@ public final class VShop extends JavaPlugin implements Listener {
                 Integer amtFulfilled = 0;
                 while (res.next()) {
 					if (res.getString("Seller").compareTo(player.getUniqueId().toString()) == 0) {
-						/*player.sendMessage(ChatColor.RED + "You can't buy from yourself. Use /cancel instead.");
-						return true;*/
 						if (res.getInt("ItemAmount") == (amtRequested - amtFulfilled)) {	        
 								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
 								//Gives the player the item
