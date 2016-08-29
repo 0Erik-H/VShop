@@ -407,7 +407,7 @@ public final class VShop extends JavaPlugin implements Listener {
 							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
 							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
 							    }
-							    player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+							    player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 								amtFulfilled = amtRequested;
 	                		
 	                	} else if (res.getInt("ItemAmount") > amtRequested) {	          
@@ -419,7 +419,7 @@ public final class VShop extends JavaPlugin implements Listener {
 							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
 							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
 							    }
-								player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");							
+								player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");							
 	                		    amtFulfilled = amtRequested;
 	                		
 	                	} else if (res.getInt("ItemAmount") < amtRequested) {
@@ -432,10 +432,9 @@ public final class VShop extends JavaPlugin implements Listener {
 							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
 							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
 							    }
-							   player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+							   player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 	                	}
-					}
-                	if (res.getBoolean("Infinite")) {
+					} else if (res.getBoolean("Infinite")) {
                 		if (eco.has(player, (res.getDouble("Price") * (amtRequested - amtFulfilled)))) {
 							eco.withdrawPlayer(player, (res.getDouble("Price") * (amtRequested - amtFulfilled)));
 							if (config.getBoolean("useServerAccount")) {
