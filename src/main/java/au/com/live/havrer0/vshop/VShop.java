@@ -398,8 +398,44 @@ public final class VShop extends JavaPlugin implements Listener {
                 Integer amtFulfilled = 0;
                 while (res.next()) {
 					if (res.getString("Seller").compareTo(player.getUniqueId().toString()) == 0) {
-						player.sendMessage(ChatColor.RED + "You can't buy from yourself. Use /cancel instead.");
-						return true;
+						/*player.sendMessage(ChatColor.RED + "You can't buy from yourself. Use /cancel instead.");
+						return true;*/
+						if (res.getInt("ItemAmount") == (amtRequested - amtFulfilled)) {	        
+								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
+								//Gives the player the item
+								ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
+								pris.setDurability(res.getShort("ItemMetadata"));
+								HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							    }
+							    player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+								amtFulfilled = amtRequested;
+	                		
+	                	} else if (res.getInt("ItemAmount") > amtRequested) {	          
+								sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
+								//Gives the player the item
+								ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
+								pris.setDurability(res.getShort("ItemMetadata"));
+								HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							    }
+								player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");							
+	                		    amtFulfilled = amtRequested;
+	                		
+	                	} else if (res.getInt("ItemAmount") < amtRequested) {
+								amtFulfilled += res.getInt("ItemAmount");
+								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
+								//Gives the player the item
+								ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
+								pris.setDurability(res.getShort("ItemMetadata"));
+								HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							    }
+							   player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+	                	}
 					}
                 	if (res.getBoolean("Infinite")) {
                 		if (eco.has(player, (res.getDouble("Price") * (amtRequested - amtFulfilled)))) {
@@ -445,9 +481,9 @@ public final class VShop extends JavaPlugin implements Listener {
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ".");
 							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
 								if (config.getBoolean("taxEnabled")) {
-									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format((1 - config.getDouble("taxPercentAsDecimal")) * (res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format((1 - config.getDouble("taxPercentAsDecimal")) * (res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 								} else {
-									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 								}
 							}
 							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");
@@ -481,9 +517,9 @@ public final class VShop extends JavaPlugin implements Listener {
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ".");
 							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
 								if (config.getBoolean("taxEnabled")) {
-									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format((1 - config.getDouble("taxPercentAsDecimal")) * (res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format((1 - config.getDouble("taxPercentAsDecimal")) * (res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");
 								} else {
-									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");
 								}
 							}
 							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");
@@ -518,9 +554,9 @@ public final class VShop extends JavaPlugin implements Listener {
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ".");
 							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
 								if (config.getBoolean("taxEnabled")) {
-									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format((1 - config.getDouble("taxPercentAsDecimal")) * (res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". After Tax: " + ChatColor.AQUA + eco.format((1 - config.getDouble("taxPercentAsDecimal")) * (res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 								} else {
-									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + args[1] + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+									this.getServer().getPlayer(UUID.fromString(res.getString("Seller"))).sendMessage(ChatColor.DARK_GREEN + player.getName() + ChatColor.GREEN + " bought " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 								}
 							}
 							this.getLogger().info(player.getName().toString() + " bought " + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ".");
