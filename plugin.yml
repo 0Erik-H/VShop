@@ -40,7 +40,12 @@ commands:
       description: Allows the player to view all the listings.
       usage: /listings
       permission: vshop.listings
-      permission-message: You can't use that command.    
+      permission-message: You can't use that command.
+   changeprice:
+      description: Allows the player to change the price of an existing listing.
+      usage: /changeprice itemname newprice
+      permission: vshop.changeprice
+      permission-message: You can't use that command.      
    vsa:
       description: Allows the player to perform a few different admin commands.
       usage: /vsa {query|delete|createinf} {query|listingid|listingid}
@@ -57,6 +62,7 @@ permissions:
       vshop.search: true
       vshop.stock: true
       vshop.listings: true
+      vshop.changeprice: true
       vshop.admin: true
       vshop.admin.query: true
       vshop.admin.delete: true
@@ -81,6 +87,9 @@ permissions:
     default: true
   vshop.listings:
     description: Allows you to view all the listings.
+    default: true
+  vshop.changeprice:
+    description: Allows you to change the price of your own listings.
     default: true
   vshop.admin:
     description: Allows you to perform admin tasks.

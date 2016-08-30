@@ -391,50 +391,57 @@ public final class VShop extends JavaPlugin implements Listener {
 				player.sendMessage(ChatColor.RED + "That wasn't a number!");
 				return false;
 			}
-			try {			
-				//Gets a list of items that match the item the player is searching for and stores it in res.
-                ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC;");
+			try {
+				//first checks for listings from the player
+				ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' AND Seller='" + player.getUniqueId().toString() + "' ORDER BY Price ASC;");
                 Integer amtRequested = Integer.parseInt(args[1]);
                 Integer amtFulfilled = 0;
+                while(res.next()) {
+                	if (res.getInt("ItemAmount") == (amtRequested - amtFulfilled)) {	        
+						sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
+						//Gives the player the item
+						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
+						pris.setDurability(res.getShort("ItemMetadata"));
+						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					    }
+					    player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+						amtFulfilled = amtRequested;
+            		
+            	} else if (res.getInt("ItemAmount") > amtRequested) {	          
+						sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
+						//Gives the player the item
+						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
+						pris.setDurability(res.getShort("ItemMetadata"));
+						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					    }
+						player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");							
+            		    amtFulfilled = amtRequested;
+            		
+            	} else if (res.getInt("ItemAmount") < amtRequested) {
+						amtFulfilled += res.getInt("ItemAmount");
+						sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
+						//Gives the player the item
+						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
+						pris.setDurability(res.getShort("ItemMetadata"));
+						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
+					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					    }
+					   player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
+            		}
+                }
+                if (amtFulfilled == amtRequested) {
+                	player.sendMessage(ChatColor.GREEN + "Fulfilled all the items you requested using items from your own listing.");
+                	return true;
+            	}
+                //then checks other player's listings
+                res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' ORDER BY Price ASC;");
                 while (res.next()) {
-					if (res.getString("Seller").compareTo(player.getUniqueId().toString()) == 0) {
-						if (res.getInt("ItemAmount") == (amtRequested - amtFulfilled)) {	        
-								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
-								//Gives the player the item
-								ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
-								pris.setDurability(res.getShort("ItemMetadata"));
-								HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-							    }
-							    player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
-								amtFulfilled = amtRequested;
-	                		
-	                	} else if (res.getInt("ItemAmount") > amtRequested) {	          
-								sql.query("UPDATE Selling SET ItemAmount ='" + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + "' WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
-								//Gives the player the item
-								ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
-								pris.setDurability(res.getShort("ItemMetadata"));
-								HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-							    }
-								player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");							
-	                		    amtFulfilled = amtRequested;
-	                		
-	                	} else if (res.getInt("ItemAmount") < amtRequested) {
-								amtFulfilled += res.getInt("ItemAmount");
-								sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
-								//Gives the player the item
-								ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
-								pris.setDurability(res.getShort("ItemMetadata"));
-								HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-							    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-							        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-							    }
-							   player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
-	                	}
-					} else if (res.getBoolean("Infinite")) {
+                	if (res.getBoolean("Infinite")) {
                 		if (eco.has(player, (res.getDouble("Price") * (amtRequested - amtFulfilled)))) {
 							eco.withdrawPlayer(player, (res.getDouble("Price") * (amtRequested - amtFulfilled)));
 							if (config.getBoolean("useServerAccount")) {
@@ -760,6 +767,45 @@ public final class VShop extends JavaPlugin implements Listener {
 				}
 			}
 			
+		}
+		
+		if (cmd.getName().equalsIgnoreCase("changeprice") && sender.hasPermission("vshop.changeprice")) {
+			if (args.length < 2) {
+				return false;
+			}
+			try {
+				Items.itemByName(args[0]).getName().toString();
+			} catch (NullPointerException e) {
+				sender.sendMessage(ChatColor.RED + "That item name wasn't recognised.");
+				return false;
+			}
+			try {
+				Double.parseDouble(args[1]);
+			} catch (NumberFormatException e) {
+				sender.sendMessage(ChatColor.RED + "That doesn't seem to be a number.");
+				return false;
+			}
+			if (Double.parseDouble(args[1]) < 0) {
+				sender.sendMessage(ChatColor.RED + "You can't use negative numbers!");
+				return true;
+			}
+			
+			Player player = (Player) sender;
+			try {
+				ResultSet res = sql.query("SELECT * FROM Selling WHERE Seller='" + player.getUniqueId() + "' AND ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "';");
+				sql.query("UPDATE Selling SET Price='" + args[1] + "' WHERE Seller='" + player.getUniqueId() + "' AND ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "';");
+				player.sendMessage(ChatColor.GREEN + "Successfully updated your price of " + ChatColor.AQUA + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + ". Its previous price was " + ChatColor.AQUA + eco.format(res.getDouble("Price")) + ChatColor.GREEN + ".");
+				return true;
+			} catch (SQLException e) {
+				if (e.getMessage().contains("closed")) {
+					sender.sendMessage(ChatColor.RED + "You must not be selling that item.");
+					return true;
+				} else {
+					sender.sendMessage(ChatColor.RED + "An SQL error occurred.");
+					e.printStackTrace();
+					return true;
+				}
+			}
 		}
 		
 		if (cmd.getName().equalsIgnoreCase("vsa") && sender.hasPermission("vshop.admin")) {
