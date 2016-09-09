@@ -86,16 +86,15 @@ public final class VShop extends JavaPlugin implements Listener {
 				e.printStackTrace();
 			}*/
 	    	try {
-				sql.query("CREATE TABLE `Selling` ( `SellingID`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `ItemName`	TEXT NOT NULL, `ItemMetadata`	INTEGER NOT NULL DEFAULT 0, `ItemAmount`	INTEGER NOT NULL, `Seller`	TEXT NOT NULL, `Price`	REAL NOT NULL, `Infinite`	INTEGER  NOT NULL DEFAULT 0);");
+				sql.query("CREATE TABLE `Selling` (`SellingID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `ItemName` TEXT NOT NULL, `ItemMetadata` INTEGER NOT NULL DEFAULT 0, `ItemAmount` INTEGER NOT NULL, `Seller` TEXT NOT NULL, `Price` REAL NOT NULL, `Infinite` INTEGER  NOT NULL DEFAULT 0);");
 			} catch (SQLException e) {				
 				e.printStackTrace();
 			}
-	    /*	try {
-				sql.query("CREATE TABLE `Transactions` ( `TransactionID`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `SellingID`	INTEGER NOT NULL, `Purchaser`	TEXT NOT NULL, `AmountPurchased`	INTEGER NOT NULL)");
+	    	try {
+				sql.query("CREATE TABLE `Transactions` (`TransactionID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `ItemName` TEXT NOT NULL, `ItemMetadata` INTEGER NOT NULL DEFAULT 0, `Seller` TEXT NOT NULL, `Purchaser` TEXT NOT NULL, `Price` REAL NOT NULL, `AmountPurchased` INTEGER NOT NULL);");
 			} catch (SQLException e) {				
 				e.printStackTrace();
 			}
-			*/
             config.set("setupDone", true);
             config.set("taxEnabled", false);
             config.set("taxPercentAsDecimal", 0.1);
@@ -113,7 +112,8 @@ public final class VShop extends JavaPlugin implements Listener {
 	
 	@Override
 	public void onDisable() {
-		saveYamls();
+		//No need to save configuration files, as they are not modified in game.
+		//saveYamls();
 		sql.close();
 		this.getLogger().info("VShop version " + this.getDescription().getVersion().toString() + " has been unloaded!");
 	}
@@ -392,7 +392,7 @@ public final class VShop extends JavaPlugin implements Listener {
 				return false;
 			}
 			try {
-				//first checks for listings from the player
+				//first, checks for listings from the player
 				ResultSet res = sql.query("SELECT * FROM Selling WHERE ItemName='" + Items.itemByName(args[0]).getType().toString() + "' AND ItemMetadata='" + Items.itemByName(args[0]).toStack().getDurability() + "' AND Seller='" + player.getUniqueId().toString() + "' ORDER BY Price ASC;");
                 Integer amtRequested = Integer.parseInt(args[1]);
                 Integer amtFulfilled = 0;
@@ -454,7 +454,8 @@ public final class VShop extends JavaPlugin implements Listener {
 						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
 						    }
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ".");
-							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + "Server" + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");						
+							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + "Server" + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");
+							sql.query("INSERT INTO Transactions (ItemName, ItemMetadata, Seller, Purchaser, Price, AmountPurchased) VALUES ('" + Items.itemByName(args[0]).getType().toString() +"','" + Items.itemByName(args[0]).toStack().getDurability() + "','Server','" + player.getUniqueId().toString() + "','" + res.getDouble("Price") + "','" + (amtRequested - amtFulfilled) + "');");
 						} else {
 							player.sendMessage(ChatColor.RED + "You don't have enough money.");
 							return true;
@@ -491,6 +492,7 @@ public final class VShop extends JavaPlugin implements Listener {
 								}
 							}
 							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");
+							sql.query("INSERT INTO Transactions (ItemName, ItemMetadata, Seller, Purchaser, Price, AmountPurchased) VALUES ('" + Items.itemByName(args[0]).getType().toString() +"','" + Items.itemByName(args[0]).toStack().getDurability() + "','" + res.getString("Seller") + "','" + player.getUniqueId().toString() + "','" + res.getDouble("Price") + "','" + (amtRequested - amtFulfilled) + "');");
 						} else {
 							player.sendMessage(ChatColor.RED + "You don't have enough money for that.");
 							return true;
@@ -527,6 +529,7 @@ public final class VShop extends JavaPlugin implements Listener {
 								}
 							}
 							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");
+							sql.query("INSERT INTO Transactions (ItemName, ItemMetadata, Seller, Purchaser, Price, AmountPurchased) VALUES ('" + Items.itemByName(args[0]).getType().toString() +"','" + Items.itemByName(args[0]).toStack().getDurability() + "','" + res.getString("Seller") + "','" + player.getUniqueId().toString() + "','" + res.getDouble("Price") + "','" + (amtRequested - amtFulfilled) + "');");
 						} else {
 							player.sendMessage(ChatColor.RED + "You don't have enough money for that.");
 							return true;
@@ -545,8 +548,7 @@ public final class VShop extends JavaPlugin implements Listener {
 								}
 							} else {
 								eco.depositPlayer(this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))), ((res.getDouble("Price") * res.getInt("ItemAmount"))));
-							}
-							amtFulfilled += res.getInt("ItemAmount");
+							}							
 							sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + res.getString("Seller") + "';");						
 							//Gives the player the item
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
@@ -564,11 +566,13 @@ public final class VShop extends JavaPlugin implements Listener {
 								}
 							}
 							this.getLogger().info(player.getName().toString() + " bought " + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + " from " + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + " for " + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ".");
+							sql.query("INSERT INTO Transactions (ItemName, ItemMetadata, Seller, Purchaser, Price, AmountPurchased) VALUES ('" + Items.itemByName(args[0]).getType().toString() +"','" + Items.itemByName(args[0]).toStack().getDurability() + "','" + res.getString("Seller") + "','" + player.getUniqueId().toString() + "','" + res.getDouble("Price") + "','" + res.getInt("ItemAmount") + "');");
+							amtFulfilled += res.getInt("ItemAmount");
 						} else {
 							player.sendMessage(ChatColor.RED + "You don't have enough money for that.");
 							return true;
 						}
-                		
+                		amtFulfilled += res.getInt("ItemAmount");
                 	}
                 	
                 	if (amtFulfilled == amtRequested) {
@@ -808,9 +812,99 @@ public final class VShop extends JavaPlugin implements Listener {
 			}
 		}
 		
+		if (cmd.getName().equalsIgnoreCase("transactions") && sender.hasPermission("vshop.transactions")) {
+			if (args.length < 1) {
+				try {
+					if (!(sender instanceof Player)) {
+						sender.sendMessage(ChatColor.RED + "You don't have a UUID.");
+						return false;
+					}
+					Player player = (Player) sender;
+					ResultSet res;
+					Integer curPage;
+					curPage = 1;
+					res = sql.query("SELECT * FROM Transactions WHERE Seller='" + player.getUniqueId().toString() + "' ORDER BY TransactionID DESC LIMIT 6;");
+					sender.sendMessage(ChatColor.GREEN + "Your transactions.");
+					while (res.next()) {
+						player.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Purchaser"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + res.getInt("AmountPurchased") + ChatColor.GREEN + " x " + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getInt("AmountPurchased") * res.getDouble("Price"))) + ChatColor.GREEN + ".");
+					}
+					res = sql.query("SELECT COUNT(*) AS totalPages FROM Transactions WHERE WHERE Seller='" + player.getUniqueId().toString() + "';");
+					if ((res.getInt("totalPages") % 6) > 0) {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+					} else {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
+					}
+					res.close();
+					return true;
+				} catch (SQLException e) {
+					if (e.getMessage().contains("closed")) {
+						sender.sendMessage(ChatColor.RED + "You must not have any transactions.");
+						return true;
+					} else {
+						e.printStackTrace();
+						return true;
+					}
+				}
+			}
+			try {
+				if (args[0].equalsIgnoreCase("Server")) {
+					ResultSet res;
+					Integer curPage;
+					if (args.length < 2) {
+						curPage = 1;
+						res = sql.query("SELECT * FROM Transactions WHERE Seller='Server' ORDER BY TransactionID DESC LIMIT 6;");
+					} else {
+						curPage = Integer.parseInt(args[1]);
+						res = sql.query("SELECT * FROM Transactions WHERE Seller='Server' ORDER BY TransactionID DESC LIMIT 6 OFFSET " + ((curPage - 1) * 6) + ";");
+					}
+					sender.sendMessage(ChatColor.DARK_GREEN + "Server's" + ChatColor.GREEN +  " transactions.");
+					while (res.next()) {
+						sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Purchaser"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + res.getInt("AmountPurchased") + ChatColor.GREEN + " x " + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getInt("AmountPurchased") * res.getDouble("Price"))) + ChatColor.GREEN + ".");
+					}
+					res = sql.query("SELECT COUNT(*) AS totalPages FROM Transactions WHERE Seller='Server';");
+					if ((res.getInt("totalPages") % 6) > 0) {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+					} else {
+						sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
+					}
+					res.close();
+					return true;
+				}
+				ResultSet res;
+				Integer curPage;
+				if (args.length < 2) {
+					curPage = 1;
+					res = sql.query("SELECT * FROM Transactions WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() + "' ORDER BY TransactionID DESC LIMIT 6;");
+				} else {
+					curPage = Integer.parseInt(args[1]);
+					res = sql.query("SELECT * FROM Transactions WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() + "' ORDER BY TransactionID DESC LIMIT 6 OFFSET " + ((curPage - 1) * 6) + ";");
+				}
+				sender.sendMessage(ChatColor.DARK_GREEN + args[0].toString() + "'s" + ChatColor.GREEN +  " transactions.");
+				while (res.next()) {
+					sender.sendMessage(ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Purchaser"))).getName().toString() + ChatColor.GREEN + ": " + ChatColor.AQUA + res.getInt("AmountPurchased") + ChatColor.GREEN + " x " + Items.itemByType(Material.getMaterial(res.getString("ItemName")), res.getShort("ItemMetadata")).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getInt("AmountPurchased") * res.getDouble("Price"))) + ChatColor.GREEN + ".");
+				}
+				res = sql.query("SELECT COUNT(*) AS totalPages FROM Transactions WHERE Seller='" + this.getServer().getOfflinePlayer(args[0]).getUniqueId().toString() + "';");
+				if ((res.getInt("totalPages") % 6) > 0) {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + ((res.getInt("totalPages") / 6) + 1));
+				} else {
+					sender.sendMessage(ChatColor.GREEN + "Page " + ChatColor.AQUA + curPage + ChatColor.GREEN + " of " + ChatColor.AQUA + (res.getInt("totalPages") / 6));
+				}
+				res.close();
+				return true;
+			} catch (SQLException e) {
+				if (e.getMessage().contains("closed")) {
+					sender.sendMessage(ChatColor.RED + "That player must not have any transactions.");
+					return true;
+				} else {
+					e.printStackTrace();
+					return true;
+				}
+			}
+		}
+		
 		if (cmd.getName().equalsIgnoreCase("vsa") && sender.hasPermission("vshop.admin")) {
 			if (args.length < 2) {
-				return false;
+				//return false;
 			}
 			if (args[0].equalsIgnoreCase("query") && sender.hasPermission("vshop.admin.query")) {
 				String sqlq = "";
@@ -853,8 +947,11 @@ public final class VShop extends JavaPlugin implements Listener {
 				}
 			}
 			if (args[0].equalsIgnoreCase("update")) {
-		    	eco.createPlayerAccount("Server");
-		    	eco.withdrawPlayer("Server", eco.getBalance("Server"));
+				try {
+					sql.query("CREATE TABLE `Transactions` (`TransactionID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, `ItemName` TEXT NOT NULL, `ItemMetadata` INTEGER NOT NULL DEFAULT 0, `Seller` TEXT NOT NULL, `Purchaser` TEXT NOT NULL, `Price` REAL NOT NULL, `AmountPurchased` INTEGER NOT NULL);");
+				} catch (SQLException e) {				
+					e.printStackTrace();
+				}
 				return true;	
 			} 
 			return false;
