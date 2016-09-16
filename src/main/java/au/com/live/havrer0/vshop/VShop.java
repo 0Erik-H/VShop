@@ -300,11 +300,21 @@ public final class VShop extends JavaPlugin implements Listener {
 					sql.query("DELETE FROM Selling WHERE ItemName='" + res.getString("ItemName") + "' AND ItemMetadata='" + res.getString("ItemMetadata") + "' AND Seller='" + player.getUniqueId().toString() + "';");
 					ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
 					pris.setDurability(res.getShort("ItemMetadata"));
-					 HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-					        
-					    }
+					HashMap<Integer, ItemStack> nope = inv.addItem(pris);
+					for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+						int amtLeft = entry.getValue().getAmount();
+					   	while (amtLeft > 0) {
+					   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+					   			entry.getValue().setAmount(amtLeft);
+					   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					   			amtLeft = 0;
+					   		} else {
+					   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+					   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+					   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+					   		}
+					    }        
+					}
 					player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + ChatColor.GREEN + " items.");
 					res.close();
 					return true;
@@ -334,9 +344,20 @@ public final class VShop extends JavaPlugin implements Listener {
 						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
 						pris.setDurability(res.getShort("ItemMetadata"));
 					    HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-					    }
+					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+							int amtLeft = entry.getValue().getAmount();
+						   	while (amtLeft > 0) {
+						   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+						   			entry.getValue().setAmount(amtLeft);
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = 0;
+						   		} else {
+						   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+						   		}
+						    }        
+						}
 						player.sendMessage(ChatColor.GREEN + "You cancelled all of the items in that listing.");
 						res.close();
 						return true;
@@ -346,9 +367,20 @@ public final class VShop extends JavaPlugin implements Listener {
 						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), Integer.parseInt(args[1]));
 						pris.setDurability(res.getShort("ItemMetadata"));
 						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-					    }
+						for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+							int amtLeft = entry.getValue().getAmount();
+						   	while (amtLeft > 0) {
+						   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+						   			entry.getValue().setAmount(amtLeft);
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = 0;
+						   		} else {
+						   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+						   		}
+						    }        
+						}
 						player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ". Amount remaining: " + ChatColor.AQUA + (res.getInt("ItemAmount") - Integer.parseInt(args[1])) + ChatColor.GREEN + ".");
 						res.close();
 						return true;
@@ -403,9 +435,20 @@ public final class VShop extends JavaPlugin implements Listener {
 						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
 						pris.setDurability(res.getShort("ItemMetadata"));
 						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-					    }
+						for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+							int amtLeft = entry.getValue().getAmount();
+						   	while (amtLeft > 0) {
+						   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+						   			entry.getValue().setAmount(amtLeft);
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = 0;
+						   		} else {
+						   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+						   		}
+						    }        
+						}
 					    player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
 						amtFulfilled = amtRequested;
             		
@@ -415,9 +458,20 @@ public final class VShop extends JavaPlugin implements Listener {
 						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
 						pris.setDurability(res.getShort("ItemMetadata"));
 						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-					    }
+						for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+							int amtLeft = entry.getValue().getAmount();
+						   	while (amtLeft > 0) {
+						   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+						   			entry.getValue().setAmount(amtLeft);
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = 0;
+						   		} else {
+						   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+						   		}
+						    }        
+						}
 						player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + (res.getInt("ItemAmount") - (amtRequested - amtFulfilled)) + ChatColor.GREEN + ".");							
             		    amtFulfilled = amtRequested;
             		
@@ -428,9 +482,20 @@ public final class VShop extends JavaPlugin implements Listener {
 						ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
 						pris.setDurability(res.getShort("ItemMetadata"));
 						HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-					    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-					        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-					    }
+						for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+							int amtLeft = entry.getValue().getAmount();
+						   	while (amtLeft > 0) {
+						   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+						   			entry.getValue().setAmount(amtLeft);
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = 0;
+						   		} else {
+						   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+						   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+						   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+						   		}
+						    }        
+						}
 					   player.sendMessage(ChatColor.GREEN + "You cancelled " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from your listing for " + ChatColor.AQUA + "free" + ChatColor.GREEN + ". Items left: " + ChatColor.AQUA + "0" + ChatColor.GREEN + ".");
             		}
                 }
@@ -450,9 +515,20 @@ public final class VShop extends JavaPlugin implements Listener {
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
 							pris.setDurability(res.getShort("ItemMetadata"));
 							HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-						    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-						    }
+							for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+								int amtLeft = entry.getValue().getAmount();
+							   	while (amtLeft > 0) {
+							   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+							   			entry.getValue().setAmount(amtLeft);
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = 0;
+							   		} else {
+							   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+							   		}
+							    }        
+							}
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + "Server" + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ".");
 							this.getLogger().info(player.getName().toString() + " bought " + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + " from " + "Server" + " for " + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ".");
 							sql.query("INSERT INTO Transactions (ItemName, ItemMetadata, Seller, Purchaser, Price, AmountPurchased) VALUES ('" + Items.itemByName(args[0]).getType().toString() +"','" + Items.itemByName(args[0]).toStack().getDurability() + "','Server','" + player.getUniqueId().toString() + "','" + res.getDouble("Price") + "','" + (amtRequested - amtFulfilled) + "');");
@@ -480,9 +556,20 @@ public final class VShop extends JavaPlugin implements Listener {
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
 							pris.setDurability(res.getShort("ItemMetadata"));
 							HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-						    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-						    }
+							for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+								int amtLeft = entry.getValue().getAmount();
+							   	while (amtLeft > 0) {
+							   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+							   			entry.getValue().setAmount(amtLeft);
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = 0;
+							   		} else {
+							   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+							   		}
+							    }        
+							}
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ".");
 							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
 								if (config.getBoolean("taxEnabled")) {
@@ -517,9 +604,20 @@ public final class VShop extends JavaPlugin implements Listener {
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), (amtRequested - amtFulfilled));
 							pris.setDurability(res.getShort("ItemMetadata"));
 							HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-						    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-						    }
+							for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+								int amtLeft = entry.getValue().getAmount();
+							   	while (amtLeft > 0) {
+							   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+							   			entry.getValue().setAmount(amtLeft);
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = 0;
+							   		} else {
+							   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+							   		}
+							    }        
+							}
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + (amtRequested - amtFulfilled) + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * (amtRequested - amtFulfilled))) + ChatColor.GREEN + ".");
 							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
 								if (config.getBoolean("taxEnabled")) {
@@ -554,9 +652,20 @@ public final class VShop extends JavaPlugin implements Listener {
 							ItemStack pris = new ItemStack(Material.getMaterial(res.getString("ItemName")), res.getInt("ItemAmount"));
 							pris.setDurability(res.getShort("ItemMetadata"));
 							HashMap<Integer, ItemStack> nope = inv.addItem(pris);
-						    for(Entry<Integer, ItemStack> entry : nope.entrySet()) {   
-						        player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
-						    }
+							for(Entry<Integer, ItemStack> entry : nope.entrySet()) {					    	
+								int amtLeft = entry.getValue().getAmount();
+							   	while (amtLeft > 0) {
+							   		if (amtLeft < entry.getValue().getMaxStackSize()) {
+							   			entry.getValue().setAmount(amtLeft);
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = 0;
+							   		} else {
+							   			entry.getValue().setAmount(entry.getValue().getMaxStackSize());
+							   			player.getWorld().dropItemNaturally(player.getLocation(), entry.getValue());
+							   			amtLeft = amtLeft - entry.getValue().getMaxStackSize();
+							   		}
+							    }        
+							}
 							player.sendMessage(ChatColor.GREEN + "You bought " + ChatColor.AQUA + res.getInt("ItemAmount") + " " + Items.itemByName(args[0]).getName().toString() + ChatColor.GREEN + " from " + ChatColor.DARK_GREEN + this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).getName().toString() + ChatColor.GREEN + " for " + ChatColor.AQUA + eco.format((res.getDouble("Price") * res.getInt("ItemAmount"))) + ChatColor.GREEN + ".");
 							if (this.getServer().getOfflinePlayer(UUID.fromString(res.getString("Seller"))).isOnline()){
 								if (config.getBoolean("taxEnabled")) {
